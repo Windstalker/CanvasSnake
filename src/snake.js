@@ -18,16 +18,14 @@ var SnakeGame = (function (win, doc) {
             },
             snake = {
                 width: 10,
-                segmentLength: 10,
                 color: 'pink',
                 length: 6,
-                direction: 68,
-                speed: 10,
+                direction: Math.PI/2,
+                speed: 1,
                 head: [],
                 tail: [],
                 bends: [],
                 draw: function (ctx) {
-                    ctx.clearRect(0, 0, grid.width, grid.height);
                     ctx.save();
                     ctx.lineWidth = this.width;
                     ctx.lineCap = 'round';
@@ -45,92 +43,85 @@ var SnakeGame = (function (win, doc) {
                     ctx.stroke();
                     ctx.restore();
                 }
-            };
+            },
+            ctx = doc.querySelector(el).getContext('2d');
 
         snake.tail = [5, 5];
         snake.head = [5 + (10 * snake.length), 5];
-        self.snake = snake;
-        self.ctx = doc.querySelector(el).getContext('2d');
+        self.ctx = ctx;
 
         function animloop() {
+            snake.move();
+            ctx.clearRect(0, 0, grid.width, grid.height);
             snake.draw(self.ctx);
+            win.requestAnimFrame(animloop);
         }
 
-        var move = function (ev) {
+        var turn = function (ev) {
+            var dir = 0;
             switch (ev.keyCode) {
                 case 87:
                     //up key W
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][1] === snake.head[1]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[1] -= 10;
+                    dir = Math.PI;
                     break;
                 case 83:
                     //down key S
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][1] === snake.head[1]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[1] += 10;
+                    dir = 0;
                     break;
                 case 65:
                     //left key A
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][0] === snake.head[0]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[0] -= 10;
+                    dir = 3 * Math.PI / 2;
                     break;
                 case 68:
                     //right key D
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][0] === snake.head[0]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[0] += 10;
+                    dir = Math.PI / 2;
                     break;
                 default:
                     console.log('none');
                     break;
             }
-            snake.direction = ev.keyCode;
-            if (snake.tail[0] === snake.bends[0][0]) {
-                if (snake.tail[1] < snake.bends[0][1]) {
-                    snake.tail[1] += 10;
-                } else if (snake.tail[1] > snake.bends[0][1]) {
-                    snake.tail[1] -= 10;
-                }
-            } else if (snake.tail[1] === snake.bends[0][1]) {
-                if (snake.tail[0] < snake.bends[0][0]) {
-                    snake.tail[0] += 10;
-                } else if (snake.tail[0] > snake.bends[0][0]) {
-                    snake.tail[0] -= 10;
-                }
+            if (snake.direction === dir || Math.round(Math.sin(dir - snake.direction)) === 0 ) {
+                return false;
             }
-            if (snake.tail[0] === snake.bends[0][0] && snake.tail[1] === snake.bends[0][1]) {
-                snake.bends.shift();
-            }
-
-            win.requestAnimFrame(animloop);
+            snake.direction = dir;
+            snake.bends.push([snake.head[0], snake.head[1]]);
             console.log(snake.bends);
+            return true;
+
         };
-        self.snake.eat = function () {
+        snake.move = function () {
+            if (snake.bends.length === 0) {
+                snake.bends.push([snake.head[0], snake.head[1]]);
+            }
+            if (snake.head[0] > 0 && snake.head[0] < grid.width && snake.head[1] > 0 && snake.head[1] < grid.height) {
+                snake.head[0] += snake.speed * Math.round(Math.sin(snake.direction));
+                snake.head[1] += snake.speed * Math.round(Math.cos(snake.direction));
+                if (snake.tail[0] === snake.bends[0][0]) {
+                    if (snake.tail[1] < snake.bends[0][1]) {
+                        snake.tail[1] += snake.speed;
+                    } else if (snake.tail[1] > snake.bends[0][1]) {
+                        snake.tail[1] -= snake.speed;
+                    }
+                } else if (snake.tail[1] === snake.bends[0][1]) {
+                    if (snake.tail[0] < snake.bends[0][0]) {
+                        snake.tail[0] += snake.speed;
+                    } else if (snake.tail[0] > snake.bends[0][0]) {
+                        snake.tail[0] -= snake.speed;
+                    }
+                }
+                if (snake.tail[0] === snake.bends[0][0] && snake.tail[1] === snake.bends[0][1]) {
+                    snake.bends.shift();
+                }
+            } else {
+                return false;
+            }
+        };
+        snake.eat = function () {
             var head = this.head,
                 dir = this.direction;
-            switch (dir) {
-                case 87:
-                    head[1] -= 10;
-                    break;
-                case 83:
-                    head[1] += 10;
-                    break;
-                case 65:
-                    head[0] -= 10;
-                    break;
-                case 68:
-                    head[0] += 10;
-                    break;
-            }
-            win.requestAnimFrame(animloop);
         };
-        win.addEventListener('keydown', move, false);
+        self.snake = snake;
+        win.addEventListener('keydown', turn, false);
         win.requestAnimFrame(animloop);
     }
 
