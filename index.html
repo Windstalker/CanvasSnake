@@ -16,9 +16,11 @@
     <script src="src/snake.js"></script>
 </head>
 <body>
-	<canvas id="game" width="240" height="240">Your browser doesn't support canvas</canvas>
+	<canvas id="game" width="300" height="300">Your browser doesn't support canvas</canvas>
 	<script>
-		var snakeGame = new SnakeGame('#game');
+		var snakeGame = new SnakeGame('game');
+		snakeGame.initialize();
+		snakeGame.start();
 	</script>
 </body>
 </html>
