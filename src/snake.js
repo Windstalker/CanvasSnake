@@ -23,19 +23,19 @@ var SnakeGame = function (elID) {
 };
 SnakeGame.prototype = {
     init: function () {
-        var Snake = function () {
+        var Snake = function (length) {
             var i;
             this.segment = {
                 width: 10,
                 height: 10,
-                imgData: null
+                img: null
             };
             this.skinColor = 'green';
             this.skinColor2 = 'cyan';
             this.speed = 1;
             this.dirX = 1;
             this.dirY = 0;
-            this.lng = 5;
+            this.lng = length;
             this.body = [];
             for (i = 0; i < this.lng; i++) {
                 this.body.push([i, 0]);
@@ -44,13 +44,6 @@ SnakeGame.prototype = {
             return this;
         };
         Snake.prototype = {
-            draw: function (ctx) {
-                var self = this,
-                    i = 0;
-                for (i; i < self.body.length; i++) {
-                    ctx.putImageData(self.segment.imgData, self.body[i][0] * self.segment.width, self.body[i][1] * self.segment.height);
-                }
-            },
             prepareImgs: function (ctx) {
                 ctx.save();
                 ctx.fillStyle = this.skinColor2;
@@ -58,20 +51,55 @@ SnakeGame.prototype = {
                 ctx.fillStyle = this.skinColor;
                 ctx.fillRect(1, 1, this.segment.width - 2, this.segment.height - 2);
                 ctx.restore();
-                this.segment.imgData = ctx.getImageData(0,0,this.segment.width,this.segment.height);
+                this.segment.img = ctx.getImageData(0,0,this.segment.width,this.segment.height);
+            },
+            draw: function (ctx) {
+                var self = this,
+                    i = 0;
+                for (i; i < self.body.length; i++) {
+                    ctx.putImageData(self.segment.img, self.body[i][0] * self.segment.width, self.body[i][1] * self.segment.height);
+                }
+            },
+            control: function (e) {
+                console.log(this);
+                var dirX, dirY,
+                    self = this;
+                switch (e.which) {
+                    case 87: //up
+                        dirX = 0;
+                        dirY = -1;
+                        break;
+                    case 83: //down
+                        dirX = 0;
+                        dirY = 1;
+                        break;
+                    case 65: //left
+                        dirX = -1;
+                        dirY = 0;
+                        break;
+                    case 68: //right
+                        dirX = 1;
+                        dirY = 0;
+                        break;
+                    default:
+                        break;
+                }
+                if (!(self.dirY + dirY) || !(self.dirX + dirX)) {
+                    return ;
+                }
+                self.dirY = dirY; self.dirX = dirX;
             }
         };
 
-        this.snake = new Snake();
+        this.snake = new Snake(10);
         this.snake.prepareImgs(this.offContext);
         this.container.appendChild(this.canvas);
     },
     run: function () {
-        window.cancelAnimationFrame(this.raf);
         var self = this,
             lastTime = 0,
             callback = function (t) {
-                if (t - lastTime > 2000) {
+                if (t - lastTime > 500) {
                     self.animLoop();
                     lastTime = t;
                 }
