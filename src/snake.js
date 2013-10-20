@@ -18,6 +18,7 @@ var SnakeGame = function (elID) {
 	this.offContext = this.offCanvas.getContext('2d');
 	this.container = document.querySelector(elID);
 	this.raf = null;
+    this.gameOver = false;
 
 	this.init();
 };
@@ -117,11 +118,15 @@ SnakeGame.prototype = {
 		var self = this,
 			lastTime = 0,
 			callback = function (t) {
-				if (t - lastTime > 500) {
+                if (t - lastTime > 500) {
                     self.animLoop();
                     lastTime = t;
 				}
-				self.raf = window.requestAnimationFrame(callback);
+                if (self.gameOver) {
+                    self.stop();
+                } else {
+                    self.raf = window.requestAnimationFrame(callback);
+                }
 			};
 
         this.clear();
@@ -131,6 +136,7 @@ SnakeGame.prototype = {
 		this.raf = window.requestAnimationFrame(callback);
 	},
 	stop: function () {
+        console.log('stopped');
 		window.cancelAnimationFrame(this.raf);
         window.removeEventListener('keydown', this.keyHandler, false);
     },
@@ -143,18 +149,30 @@ SnakeGame.prototype = {
 	update: function () {
 		var snakeLength = this.snake.body.length,
             i = 0;
-
         this.keyHandler.dispatchKey();
+
         for (i; i < snakeLength - 1; i++) {
 			this.snake.body[i][0] = this.snake.body[i + 1][0];
 			this.snake.body[i][1] = this.snake.body[i + 1][1];
 		}
 		this.snake.body[snakeLength - 1][0] += this.snake.dirX;
 		this.snake.body[snakeLength - 1][1] += this.snake.dirY;
-	},
+        this.checkFaint();
+
+    },
 	animLoop: function () {
         this.update();
         this.clear();
 		this.draw();
+    },
+    checkFaint: function () {
+        var lngth = this.snake.body.length,
+            isBodyIntersection = this.snake.body.slice(0, -1).join(';').indexOf(this.snake.body[lngth - 1].toString()) !== -1,
+            isOutBoundary = this.snake.body[lngth - 1][0] < 0 || this.snake.body[lngth - 1][0] >= 32 ||
+                            this.snake.body[lngth - 1][1] < 0 || this.snake.body[lngth - 1][1] >= 32;
+        if (isBodyIntersection || isOutBoundary) {
+            this.gameOver = true;
+            console.log('game over');
+        }
     }
 };
