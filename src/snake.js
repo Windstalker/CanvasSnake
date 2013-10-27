@@ -18,6 +18,7 @@ var SnakeGame = function (elID) {
 	this.offContext = this.offCanvas.getContext('2d');
 	this.container = document.querySelector(elID);
 	this.raf = null;
+    this.food = [];
     this.gameOver = false;
 
 	this.init();
@@ -44,17 +45,13 @@ SnakeGame.prototype = {
                 }
 
                 return this;
+            },
+            Food = function (x, y) {
+                this.x = x;
+                this.y = y;
             };
-		Snake.prototype = {
-			prepareImgs: function (ctx) {
-				ctx.save();
-				ctx.fillStyle = this.skinColor2;
-				ctx.fillRect(0, 0, this.segment.width, this.segment.height);
-				ctx.fillStyle = this.skinColor;
-				ctx.fillRect(1, 1, this.segment.width - 2, this.segment.height - 2);
-				ctx.restore();
-				this.segment.img = ctx.getImageData(0,0,this.segment.width,this.segment.height);
-			},
+
+        Snake.prototype = {
 			draw: function (ctx) {
 				var self = this,
 					i = 0;
@@ -93,7 +90,7 @@ SnakeGame.prototype = {
 		};
 
 		this.snake = new Snake(10);
-		this.snake.prepareImgs(this.offContext);
+		this.prepareImgs(this.offContext);
 		this.container.appendChild(this.canvas);
 
         this.keyHandler = {
@@ -114,6 +111,25 @@ SnakeGame.prototype = {
             maxQueue: 3
         };
 	},
+    prepareImgs: function (ctx) {
+        var star = new Image(),
+            life = new Image();
+        star.src = './img/star.png';
+        life.src = './img/life.png';
+        star.onload = function () {
+
+        };
+        life.onload = function () {
+
+        };
+        ctx.save();
+        ctx.fillStyle = this.snake.skinColor2;
+        ctx.fillRect(0, 0, this.snake.segment.width, this.snake.segment.height);
+        ctx.fillStyle = this.snake.skinColor;
+        ctx.fillRect(1, 1, this.snake.segment.width - 2, this.snake.segment.height - 2);
+        ctx.restore();
+        this.snake.segment.img = ctx.getImageData(0,0,this.snake.segment.width,this.snake.segment.height);
+    },
 	run: function () {
 		var self = this,
 			lastTime = 0,
