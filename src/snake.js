@@ -8,20 +8,36 @@ window.requestAnimFrame = (function () {
 }());
 var SnakeGame = function (elID) {
 	'use strict';
-	this.canvas = document.createElement('canvas');
-	this.offCanvas = document.createElement('canvas');
-	this.cWidth = 320;
-	this.cHeight = 320;
-	this.canvas.width = this.offCanvas.width = this.cWidth;
-	this.canvas.height = this.offCanvas.height = this.cHeight;
-	this.context = this.canvas.getContext('2d');
-	this.offContext = this.offCanvas.getContext('2d');
-	this.container = document.querySelector(elID);
-	this.raf = null;
-    this.food = [];
-    this.gameOver = false;
+    var self = this,
+        resources = {
+            'img_star': 'img/star.png',
+            'img_life': 'img/life.png'
+        };
 
-	this.init();
+    self.canvas = document.createElement('canvas');
+    self.offCanvas = document.createElement('canvas');
+    self.cWidth = 320;
+    self.cHeight = 320;
+    self.canvas.width = self.offCanvas.width = self.cWidth;
+    self.canvas.height = self.offCanvas.height = self.cHeight;
+    self.context = self.canvas.getContext('2d');
+    self.offContext = self.offCanvas.getContext('2d');
+    self.container = document.querySelector(elID);
+    self.raf = null;
+    self.food = {
+        starImg: null,
+        lifeImg: null,
+        stars: [[10, 10]],
+        lives: [[20, 20]]
+    };
+    self.gameOver = false;
+    self.loader = imgLoader;
+
+    self.container.appendChild(self.canvas);
+
+    self.loader.load(resources).onReady(function () {
+        self.init().run();
+    });
 };
 SnakeGame.prototype = {
 	init: function () {
@@ -45,10 +61,6 @@ SnakeGame.prototype = {
                 }
 
                 return this;
-            },
-            Food = function (x, y) {
-                this.x = x;
-                this.y = y;
             };
 
         Snake.prototype = {
@@ -89,9 +101,9 @@ SnakeGame.prototype = {
             }
 		};
 
-		this.snake = new Snake(10);
-		this.prepareImgs(this.offContext);
-		this.container.appendChild(this.canvas);
+		this.snake = new Snake(4);
+
+		this.getImagesFromCache();
 
         this.keyHandler = {
             handleEvent: function (e) {
@@ -110,31 +122,28 @@ SnakeGame.prototype = {
             queue: [],
             maxQueue: 3
         };
+
+        return this;
 	},
-    prepareImgs: function (ctx) {
-        var star = new Image(),
-            life = new Image();
-        star.src = './img/star.png';
-        life.src = './img/life.png';
-        star.onload = function () {
+    getImagesFromCache: function () {
+        /** Prepare Snake segment on offscreen canvas */
+        this.offContext.fillStyle = this.snake.skinColor2;
+        this.offContext.fillRect(0, 0, this.snake.segment.width, this.snake.segment.height);
+        this.offContext.fillStyle = this.snake.skinColor;
+        this.offContext.fillRect(1, 1, this.snake.segment.width - 2, this.snake.segment.height - 2);
 
-        };
-        life.onload = function () {
+        this.snake.segment.img = this.offContext.getImageData(0,0,this.snake.segment.width,this.snake.segment.height);
 
-        };
-        ctx.save();
-        ctx.fillStyle = this.snake.skinColor2;
-        ctx.fillRect(0, 0, this.snake.segment.width, this.snake.segment.height);
-        ctx.fillStyle = this.snake.skinColor;
-        ctx.fillRect(1, 1, this.snake.segment.width - 2, this.snake.segment.height - 2);
-        ctx.restore();
-        this.snake.segment.img = ctx.getImageData(0,0,this.snake.segment.width,this.snake.segment.height);
+        this.food.starImg = this.loader.getData('img_star');
+        this.food.lifeImg = this.loader.getData('img_life');
+
+        return this;
     },
 	run: function () {
 		var self = this,
 			lastTime = 0,
 			callback = function (t) {
-                if (t - lastTime > 500) {
+                if (t - lastTime > 100) {
                     self.animLoop();
                     lastTime = t;
 				}
@@ -160,35 +169,48 @@ SnakeGame.prototype = {
 		this.context.clearRect(0,0,this.cWidth,this.cHeight);
 	},
 	draw: function () {
+        this.drawFood(this.context);
 		this.snake.draw(this.context);
 	},
+    drawFood: function (ctx) {
+        var i;
+        for (i = 0; i < this.food.stars.length; i++) {
+            ctx.drawImage(this.food.starImg, this.food.stars[i][0] * 10, this.food.stars[i][1] * 10, 10, 10);
+        }
+        for (i = 0; i < this.food.lives.length; i++) {
+            ctx.drawImage(this.food.lifeImg, this.food.lives[i][0] * 10, this.food.lives[i][1] * 10, 10, 10);
+        }
+    },
 	update: function () {
 		var snakeLength = this.snake.body.length,
+            nextHeadX, nextHeadY,
             i = 0;
+
         this.keyHandler.dispatchKey();
 
-        for (i; i < snakeLength - 1; i++) {
-			this.snake.body[i][0] = this.snake.body[i + 1][0];
-			this.snake.body[i][1] = this.snake.body[i + 1][1];
-		}
-		this.snake.body[snakeLength - 1][0] += this.snake.dirX;
-		this.snake.body[snakeLength - 1][1] += this.snake.dirY;
-        this.checkFaint();
+        nextHeadX = this.snake.body[snakeLength - 1][0] + this.snake.dirX;
+        nextHeadY = this.snake.body[snakeLength - 1][1] + this.snake.dirY;
 
+        for (i; i < snakeLength - 1; i++) {
+            this.snake.body[i][0] = this.snake.body[i + 1][0];
+            this.snake.body[i][1] = this.snake.body[i + 1][1];
+        }
+        this.snake.body[snakeLength - 1][0] = nextHeadX;
+        this.snake.body[snakeLength - 1][1] = nextHeadY;
+        this.isFaint(nextHeadX, nextHeadY);
     },
 	animLoop: function () {
         this.update();
         this.clear();
 		this.draw();
     },
-    checkFaint: function () {
-        var lngth = this.snake.body.length,
-            isBodyIntersection = this.snake.body.slice(0, -1).join(';').indexOf(this.snake.body[lngth - 1].toString()) !== -1,
-            isOutBoundary = this.snake.body[lngth - 1][0] < 0 || this.snake.body[lngth - 1][0] >= 32 ||
-                            this.snake.body[lngth - 1][1] < 0 || this.snake.body[lngth - 1][1] >= 32;
+    isFaint: function (headX, headY) {
+        var isBodyIntersection = this.snake.body.slice(0, -1).join(';').indexOf([headX, headY].toString()) !== -1,
+            isOutBoundary = headX < 0 || headX >= 32 || headY < 0 || headY >= 32;
         if (isBodyIntersection || isOutBoundary) {
             this.gameOver = true;
             console.log('game over');
         }
+        return this.gameOver;
     }
 };

@@ -61,6 +61,7 @@ var imgLoader = (function() {
         this.isDone = function () {
             return !this.counter;
         };
+
         this.onReady = function (callback) {
             if (callback instanceof Function) {
                 this.readyCallback = callback;
@@ -68,5 +69,6 @@ var imgLoader = (function() {
             return this;
         };
     };
+
     return new Loader();
-})();
+}());
