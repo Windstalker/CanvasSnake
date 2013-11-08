@@ -1,11 +1,3 @@
-window.requestAnimFrame = (function () {
-	return window.requestAnimationFrame ||
-		window.webkitRequestAnimationFrame ||
-		window.mozRequestAnimationFrame ||
-		function (callback) {
-			window.setTimeout(callback, 1000 / 60);
-		};
-}());
 var SnakeGame = function (elID) {
 	'use strict';
     var self = this,
@@ -39,6 +31,7 @@ var SnakeGame = function (elID) {
         self.init().run();
     });
 };
+
 SnakeGame.prototype = {
 	init: function () {
 		var game = this,
