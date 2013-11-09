@@ -1,139 +1,269 @@
-var SnakeGame = (function (win, doc) {
-    'use strict';
-    //var $ = win.$;
-    win.requestAnimFrame = (function () {
-        return win.requestAnimationFrame ||
-            win.webkitRequestAnimationFrame ||
-            win.mozRequestAnimationFrame ||
-            function (callback) {
-                win.setTimeout(callback, 1000 / 60);
-            };
-    }());
+var SnakeGame = function (elID) {
+	'use strict';
+    var self = this,
+        resources = {
+            'img_star': 'img/star.png',
+            'img_life': 'img/life.png'
+        };
 
-    function Game(el) {
-        var self = this, i,
-            grid = {
-                width: 240,
-                height: 240
+    self.canvas = document.createElement('canvas');
+    self.offCanvas = document.createElement('canvas');
+    self.cWidth = 320;
+    self.cHeight = 320;
+    self.canvas.width = self.offCanvas.width = self.cWidth;
+    self.canvas.height = self.offCanvas.height = self.cHeight;
+    self.context = self.canvas.getContext('2d');
+    self.offContext = self.offCanvas.getContext('2d');
+    self.container = document.querySelector(elID);
+    self.raf = null;
+    self.food = {
+        star: null,
+        life: null,
+        positions: []
+    };
+    self.gameOver = false;
+    self.loader = imgLoader;
+
+    self.container.appendChild(self.canvas);
+
+    self.loader.load(resources).onReady(function () {
+        self.init().run();
+    });
+};
+
+SnakeGame.prototype = {
+	init: function () {
+		var game = this,
+            Snake = function (length) {
+                var i;
+                this.segment = {
+                    width: 10,
+                    height: 10,
+                    img: null
+                };
+                this.skinColor = 'green';
+                this.skinColor2 = 'cyan';
+                this.speed = 1;
+                this.dirX = 1;
+                this.dirY = 0;
+                this.lng = length;
+                this.body = [];
+                for (i = 0; i < this.lng; i++) {
+                    this.body.push([i, 0]);
+                }
+
+                return this;
+            };
+
+        Snake.prototype = {
+			draw: function (ctx) {
+				var self = this,
+					i = 0;
+				for (i; i < self.body.length; i++) {
+					ctx.putImageData(self.segment.img, self.body[i][0] * self.segment.width, self.body[i][1] * self.segment.height);
+				}
+			},
+            control: function (key) {
+                var dirX, dirY,
+                    self = this;
+                switch (key) {
+                    case 87: //up
+                        dirX = 0;
+                        dirY = -1;
+                        break;
+                    case 83: //down
+                        dirX = 0;
+                        dirY = 1;
+                        break;
+                    case 65: //left
+                        dirX = -1;
+                        dirY = 0;
+                        break;
+                    case 68: //right
+                        dirX = 1;
+                        dirY = 0;
+                        break;
+                    default:
+                        break;
+                }
+                if (!(self.dirY + dirY) || !(self.dirX + dirX)) {
+                    return ;
+                }
+                self.dirY = dirY; self.dirX = dirX;
             },
-            snake = {
-                width: 10,
-                segmentLength: 10,
-                color: 'pink',
-                length: 6,
-                direction: 68,
-                speed: 10,
-                head: [],
-                tail: [],
-                bends: [],
-                draw: function (ctx) {
-                    ctx.clearRect(0, 0, grid.width, grid.height);
-                    ctx.save();
-                    ctx.lineWidth = this.width;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.strokeStyle = this.color;
-                    ctx.beginPath();
-                    ctx.moveTo(this.tail[0], this.tail[1]);
-                    if (this.bends.length > 0) {
-                        for (i = 0; i < this.bends.length; i++) {
-                            ctx.lineTo(this.bends[i][0], this.bends[i][1]);
-                            ctx.moveTo(this.bends[i][0], this.bends[i][1]);
-                        }
-                    }
-                    ctx.lineTo(this.head[0], this.head[1]);
-                    ctx.stroke();
-                    ctx.restore();
+            scan: function (foodPos) {
+                var nextHeadX = this.body[this.body.length - 1][0] + this.dirX,
+                    nextHeadY = this.body[this.body.length - 1][1] + this.dirY,
+					foodDetected = null,
+					i = 0;
+                for (i; i < foodPos.length; i++) {
+					if (foodPos[i][0] === nextHeadX && foodPos[i][1] === nextHeadY) {
+						foodDetected = foodPos[i];
+						foodPos.splice(i, 1);
+						return foodDetected;
+					}
+				}
+                return null;
+            },
+            move: function () {
+                var i = 0;
+
+                for (i; i < this.body.length - 1; i++) {
+                    this.body[i][0] = this.body[i + 1][0];
+                    this.body[i][1] = this.body[i + 1][1];
                 }
-            };
+                this.body[this.body.length - 1][0] += this.dirX;
+                this.body[this.body.length - 1][1] += this.dirY;
+            },
+            eat: function (food) {
+				var foodType = food instanceof Array ? food[2] : '';
+                switch (foodType) {
+                    case 'star':
+                        this.grow();
+                        break;
+                    case 'life':
+                        this.move();
+                        break;
+                    default:
+						break;
+                }
+				return foodType;
+            },
+            grow: function () {
+                var x = this.body[this.body.length - 1][0] + this.dirX,
+                    y = this.body[this.body.length - 1][1] + this.dirY;
+                this.body.push([x, y]);
+            }
+		};
 
-        snake.tail = [5, 5];
-        snake.head = [5 + (10 * snake.length), 5];
-        self.snake = snake;
-        self.ctx = doc.querySelector(el).getContext('2d');
+		this.snake = new Snake(3);
 
-        function animloop() {
-            snake.draw(self.ctx);
+		this.getImagesFromCache();
+
+        this.controller = {
+            handleEvent: function (e) {
+                this.addKey(e);
+            },
+            dispatchKey: function () {
+                if (this.queue.length) {
+                    game.snake.control(this.queue.pop());
+                }
+            },
+            addKey: function (e) {
+                if (this.queue.length < this.maxQueue) {
+                    this.queue.unshift(e.which);
+                }
+            },
+            queue: [],
+            maxQueue: 3
+        };
+
+        return this;
+	},
+    getImagesFromCache: function () {
+        /** Prepare Snake segment on offscreen canvas */
+        this.offContext.fillStyle = this.snake.skinColor2;
+        this.offContext.fillRect(0, 0, this.snake.segment.width, this.snake.segment.height);
+        this.offContext.fillStyle = this.snake.skinColor;
+        this.offContext.fillRect(1, 1, this.snake.segment.width - 2, this.snake.segment.height - 2);
+
+        this.snake.segment.img = this.offContext.getImageData(0,0,this.snake.segment.width,this.snake.segment.height);
+
+        this.food.star = this.loader.getData('img_star');
+        this.food.life = this.loader.getData('img_life');
+
+        return this;
+    },
+	run: function () {
+		var self = this,
+			lastTime = 0,
+			callback = function (t) {
+                t = Date.now();
+                if (t - lastTime > 150) {
+                    self.animLoop();
+                    lastTime = t;
+                }
+                if (!self.gameOver) {
+                    self.raf = window.requestAnimationFrame(callback);
+                } else {
+                    self.stop();
+                }
+			};
+
+        window.addEventListener('keydown', this.controller, false);
+		this.raf = window.requestAnimationFrame(callback);
+	},
+	stop: function () {
+        console.log('stopped');
+		window.cancelAnimationFrame(this.raf);
+        window.removeEventListener('keydown', this.controller, false);
+    },
+    animLoop: function () {
+        this.draw();
+        this.update();
+    },
+	clear: function () {
+		this.context.clearRect(0,0,this.cWidth,this.cHeight);
+	},
+	draw: function () {
+        this.clear();
+        this.drawFood(this.context);
+		this.snake.draw(this.context);
+	},
+    drawFood: function (ctx) {
+        var i, foodType;
+        for (i = 0; i < this.food.positions.length; i++) {
+            foodType = this.food.positions[i][2];
+            ctx.drawImage(this.food[foodType], this.food.positions[i][0] * 10, this.food.positions[i][1] * 10, 10, 10);
         }
-
-        var move = function (ev) {
-            switch (ev.keyCode) {
-                case 87:
-                    //up key W
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][1] === snake.head[1]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[1] -= 10;
-                    break;
-                case 83:
-                    //down key S
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][1] === snake.head[1]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[1] += 10;
-                    break;
-                case 65:
-                    //left key A
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][0] === snake.head[0]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[0] -= 10;
-                    break;
-                case 68:
-                    //right key D
-                    if (snake.bends.length === 0 || snake.bends[snake.bends.length - 1][0] === snake.head[0]) {
-                        snake.bends.push([snake.head[0], snake.head[1]]);
-                    }
-                    snake.head[0] += 10;
-                    break;
-                default:
-                    console.log('none');
-                    break;
-            }
-            snake.direction = ev.keyCode;
-            if (snake.tail[0] === snake.bends[0][0]) {
-                if (snake.tail[1] < snake.bends[0][1]) {
-                    snake.tail[1] += 10;
-                } else if (snake.tail[1] > snake.bends[0][1]) {
-                    snake.tail[1] -= 10;
-                }
-            } else if (snake.tail[1] === snake.bends[0][1]) {
-                if (snake.tail[0] < snake.bends[0][0]) {
-                    snake.tail[0] += 10;
-                } else if (snake.tail[0] > snake.bends[0][0]) {
-                    snake.tail[0] -= 10;
-                }
-            }
-            if (snake.tail[0] === snake.bends[0][0] && snake.tail[1] === snake.bends[0][1]) {
-                snake.bends.shift();
-            }
-
-            win.requestAnimFrame(animloop);
-            console.log(snake.bends);
-        };
-        self.snake.eat = function () {
-            var head = this.head,
-                dir = this.direction;
-            switch (dir) {
-                case 87:
-                    head[1] -= 10;
-                    break;
-                case 83:
-                    head[1] += 10;
-                    break;
-                case 65:
-                    head[0] -= 10;
-                    break;
-                case 68:
-                    head[0] += 10;
-                    break;
-            }
-            win.requestAnimFrame(animloop);
-        };
-        win.addEventListener('keydown', move, false);
-        win.requestAnimFrame(animloop);
+    },
+	update: function () {
+        this.controller.dispatchKey();
+        if (!this.snake.eat(this.snake.scan(this.food.positions))) {
+			this.snake.move();
+		}
+		this.foodPlacer();
+		this.isFaint();
+	},
+	foodPlacer: function (foodType) {
+		var type = foodType && foodType instanceof String ? foodType : '',
+			self = this,
+			rndPos = function () {
+				return Math.floor(Math.random() * 32);
+			},
+			isPlaceBusy = function (x, y) {
+				var newPos = new RegExp('\\[' + [x,y]);
+				return newPos.test(JSON.stringify(self.snake.body) + JSON.stringify(self.food.positions));
+			},
+			genFood = function (str) {
+				var tries = 0,
+					rndX = rndPos(),
+					rndY = rndPos();
+				while (isPlaceBusy(rndX, rndY) && tries < 3) {
+					rndX = rndPos();
+					rndY = rndPos();
+					tries++;
+				}
+				if (tries < 3) {
+					self.food.positions.push([rndX, rndY, str]);
+				}
+			};
+		if (type.length == 0 && this.food.positions.length < 1) {
+			genFood('star');
+		} else if (type.length > 0) {
+			genFood(type);
+		}
+	},
+    isFaint: function () {
+        var body = this.snake.body,
+            headX = body[body.length - 1][0],
+            headY = body[body.length - 1][1],
+            isBodyIntersection = JSON.stringify(body.slice(0, -1)).indexOf(JSON.stringify([headX, headY])) !== -1,
+            isOutBoundary = headX < 0 || headX >= 32 || headY < 0 || headY >= 32;
+        if (isBodyIntersection || isOutBoundary) {
+            this.gameOver = true;
+            console.log('game over');
+        }
+        return this.gameOver;
     }
-
-    return Game;
-}(window, document));
-
+};

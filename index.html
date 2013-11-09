@@ -13,10 +13,13 @@
     <script src="libs/kinetic-v4.5.4.min.js"></script>
     <script src="libs/underscore-min.js"></script>
     
+    <script src="src/loader.js"></script>
+    <script src="src/raf.js"></script>
     <script src="src/snake.js"></script>
 </head>
 <body>
-	<canvas id="game" width="240" height="240">Your browser doesn't support canvas</canvas>
+	<div id="game"></div>
+	<!--<canvas id="game" width="300" height="300">Your browser doesn't support canvas</canvas>-->
 	<script>
 		var snakeGame = new SnakeGame('#game');
 	</script>
