@@ -17,10 +17,9 @@ var SnakeGame = function (elID) {
     self.container = document.querySelector(elID);
     self.raf = null;
     self.food = {
-        starImg: null,
-        lifeImg: null,
-        stars: [[10, 10]],
-        lives: [[20, 20]]
+        star: null,
+        life: null,
+        positions: [[10, 10, 'star'], [20, 20, 'life']]
     };
     self.gameOver = false;
     self.loader = imgLoader;
@@ -91,10 +90,44 @@ SnakeGame.prototype = {
                     return ;
                 }
                 self.dirY = dirY; self.dirX = dirX;
+            },
+            scanner: function (foodData) {
+                var nextHeadX = this.body[this.body.length - 1][0] + this.dirX,
+                    nextHeadY = this.body[this.body.length - 1][1] + this.dirY,
+                    type = '';
+                console.log(JSON.stringify([nextHeadX, nextHeadY]), JSON.stringify(foodData.positions).indexOf('[' + [nextHeadX, nextHeadY]));
+                return type;
+            },
+            move: function () {
+                var i = 0;
+
+                for (i; i < this.body.length - 1; i++) {
+                    this.body[i][0] = this.body[i + 1][0];
+                    this.body[i][1] = this.body[i + 1][1];
+                }
+                this.body[this.body.length - 1][0] += this.dirX;
+                this.body[this.body.length - 1][1] += this.dirY;
+            },
+            eat: function (foodType) {
+                switch (foodType) {
+                    case 'star':
+                        this.grow();
+                        break;
+                    case 'life':
+                        this.move();
+                        break;
+                    default:
+                        break;
+                }
+            },
+            grow: function () {
+                var x = this.body[this.body.length - 1][0] + this.dirX,
+                    y = this.body[this.body.length - 1][1] + this.dirY;
+                this.body.push([x, y]);
             }
 		};
 
-		this.snake = new Snake(4);
+		this.snake = new Snake(20);
 
 		this.getImagesFromCache();
 
@@ -127,8 +160,8 @@ SnakeGame.prototype = {
 
         this.snake.segment.img = this.offContext.getImageData(0,0,this.snake.segment.width,this.snake.segment.height);
 
-        this.food.starImg = this.loader.getData('img_star');
-        this.food.lifeImg = this.loader.getData('img_life');
+        this.food.star = this.loader.getData('img_star');
+        this.food.life = this.loader.getData('img_life');
 
         return this;
     },
@@ -136,19 +169,17 @@ SnakeGame.prototype = {
 		var self = this,
 			lastTime = 0,
 			callback = function (t) {
-                if (t - lastTime > 100) {
+                t = Date.now();
+                if (t - lastTime > 200) {
                     self.animLoop();
                     lastTime = t;
-				}
-                if (self.gameOver) {
-                    self.stop();
-                } else {
+                }
+                if (!self.gameOver) {
                     self.raf = window.requestAnimationFrame(callback);
+                } else {
+                    self.stop();
                 }
 			};
-
-        this.clear();
-        this.draw();
 
         window.addEventListener('keydown', this.keyHandler, false);
 		this.raf = window.requestAnimationFrame(callback);
@@ -158,47 +189,39 @@ SnakeGame.prototype = {
 		window.cancelAnimationFrame(this.raf);
         window.removeEventListener('keydown', this.keyHandler, false);
     },
+    animLoop: function () {
+        this.draw();
+        this.update();
+    },
 	clear: function () {
 		this.context.clearRect(0,0,this.cWidth,this.cHeight);
 	},
 	draw: function () {
+        this.clear();
         this.drawFood(this.context);
 		this.snake.draw(this.context);
 	},
     drawFood: function (ctx) {
-        var i;
-        for (i = 0; i < this.food.stars.length; i++) {
-            ctx.drawImage(this.food.starImg, this.food.stars[i][0] * 10, this.food.stars[i][1] * 10, 10, 10);
-        }
-        for (i = 0; i < this.food.lives.length; i++) {
-            ctx.drawImage(this.food.lifeImg, this.food.lives[i][0] * 10, this.food.lives[i][1] * 10, 10, 10);
+        var i, foodType;
+        for (i = 0; i < this.food.positions.length; i++) {
+            foodType = this.food.positions[i][2];
+            ctx.drawImage(this.food[foodType], this.food.positions[i][0] * 10, this.food.positions[i][1] * 10, 10, 10);
         }
     },
 	update: function () {
 		var snakeLength = this.snake.body.length,
-            nextHeadX, nextHeadY,
             i = 0;
 
         this.keyHandler.dispatchKey();
-
-        nextHeadX = this.snake.body[snakeLength - 1][0] + this.snake.dirX;
-        nextHeadY = this.snake.body[snakeLength - 1][1] + this.snake.dirY;
-
-        for (i; i < snakeLength - 1; i++) {
-            this.snake.body[i][0] = this.snake.body[i + 1][0];
-            this.snake.body[i][1] = this.snake.body[i + 1][1];
-        }
-        this.snake.body[snakeLength - 1][0] = nextHeadX;
-        this.snake.body[snakeLength - 1][1] = nextHeadY;
-        this.isFaint(nextHeadX, nextHeadY);
+        this.snake.scanner(this.food);
+        this.snake.move();
+        this.isFaint();
     },
-	animLoop: function () {
-        this.update();
-        this.clear();
-		this.draw();
-    },
-    isFaint: function (headX, headY) {
-        var isBodyIntersection = this.snake.body.slice(0, -1).join(';').indexOf([headX, headY].toString()) !== -1,
+    isFaint: function () {
+        var body = this.snake.body,
+            headX = body[body.length - 1][0],
+            headY = body[body.length - 1][1],
+            isBodyIntersection = JSON.stringify(body.slice(0, -1)).indexOf(JSON.stringify([headX, headY])) !== -1,
             isOutBoundary = headX < 0 || headX >= 32 || headY < 0 || headY >= 32;
         if (isBodyIntersection || isOutBoundary) {
             this.gameOver = true;
