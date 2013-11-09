@@ -19,7 +19,7 @@ var SnakeGame = function (elID) {
     self.food = {
         star: null,
         life: null,
-        positions: [[10, 10, 'star'], [20, 20, 'life']]
+        positions: []
     };
     self.gameOver = false;
     self.loader = imgLoader;
@@ -91,12 +91,19 @@ SnakeGame.prototype = {
                 }
                 self.dirY = dirY; self.dirX = dirX;
             },
-            scanner: function (foodData) {
+            scan: function (foodPos) {
                 var nextHeadX = this.body[this.body.length - 1][0] + this.dirX,
                     nextHeadY = this.body[this.body.length - 1][1] + this.dirY,
-                    type = '';
-                console.log(JSON.stringify([nextHeadX, nextHeadY]), JSON.stringify(foodData.positions).indexOf('[' + [nextHeadX, nextHeadY]));
-                return type;
+					foodDetected = null,
+					i = 0;
+                for (i; i < foodPos.length; i++) {
+					if (foodPos[i][0] === nextHeadX && foodPos[i][1] === nextHeadY) {
+						foodDetected = foodPos[i];
+						foodPos.splice(i, 1);
+						return foodDetected;
+					}
+				}
+                return null;
             },
             move: function () {
                 var i = 0;
@@ -108,7 +115,8 @@ SnakeGame.prototype = {
                 this.body[this.body.length - 1][0] += this.dirX;
                 this.body[this.body.length - 1][1] += this.dirY;
             },
-            eat: function (foodType) {
+            eat: function (food) {
+				var foodType = food instanceof Array ? food[2] : '';
                 switch (foodType) {
                     case 'star':
                         this.grow();
@@ -117,8 +125,9 @@ SnakeGame.prototype = {
                         this.move();
                         break;
                     default:
-                        break;
+						break;
                 }
+				return foodType;
             },
             grow: function () {
                 var x = this.body[this.body.length - 1][0] + this.dirX,
@@ -127,11 +136,11 @@ SnakeGame.prototype = {
             }
 		};
 
-		this.snake = new Snake(20);
+		this.snake = new Snake(3);
 
 		this.getImagesFromCache();
 
-        this.keyHandler = {
+        this.controller = {
             handleEvent: function (e) {
                 this.addKey(e);
             },
@@ -170,7 +179,7 @@ SnakeGame.prototype = {
 			lastTime = 0,
 			callback = function (t) {
                 t = Date.now();
-                if (t - lastTime > 200) {
+                if (t - lastTime > 150) {
                     self.animLoop();
                     lastTime = t;
                 }
@@ -181,13 +190,13 @@ SnakeGame.prototype = {
                 }
 			};
 
-        window.addEventListener('keydown', this.keyHandler, false);
+        window.addEventListener('keydown', this.controller, false);
 		this.raf = window.requestAnimationFrame(callback);
 	},
 	stop: function () {
         console.log('stopped');
 		window.cancelAnimationFrame(this.raf);
-        window.removeEventListener('keydown', this.keyHandler, false);
+        window.removeEventListener('keydown', this.controller, false);
     },
     animLoop: function () {
         this.draw();
@@ -209,14 +218,42 @@ SnakeGame.prototype = {
         }
     },
 	update: function () {
-		var snakeLength = this.snake.body.length,
-            i = 0;
-
-        this.keyHandler.dispatchKey();
-        this.snake.scanner(this.food);
-        this.snake.move();
-        this.isFaint();
-    },
+        this.controller.dispatchKey();
+        if (!this.snake.eat(this.snake.scan(this.food.positions))) {
+			this.snake.move();
+		}
+		this.foodPlacer();
+		this.isFaint();
+	},
+	foodPlacer: function (foodType) {
+		var type = foodType && foodType instanceof String ? foodType : '',
+			self = this,
+			rndPos = function () {
+				return Math.floor(Math.random() * 32);
+			},
+			isPlaceBusy = function (x, y) {
+				var newPos = new RegExp('\\[' + [x,y]);
+				return newPos.test(JSON.stringify(self.snake.body) + JSON.stringify(self.food.positions));
+			},
+			genFood = function (str) {
+				var tries = 0,
+					rndX = rndPos(),
+					rndY = rndPos();
+				while (isPlaceBusy(rndX, rndY) && tries < 3) {
+					rndX = rndPos();
+					rndY = rndPos();
+					tries++;
+				}
+				if (tries < 3) {
+					self.food.positions.push([rndX, rndY, str]);
+				}
+			};
+		if (type.length == 0 && this.food.positions.length < 1) {
+			genFood('star');
+		} else if (type.length > 0) {
+			genFood(type);
+		}
+	},
     isFaint: function () {
         var body = this.snake.body,
             headX = body[body.length - 1][0],
