@@ -1,15 +1,17 @@
-var SnakeGame = function (elID) {
+var SnakeGame = function (elID, width, height) {
 	'use strict';
     var self = this,
         resources = {
             'img_star': 'img/star.png',
             'img_life': 'img/life.png'
-        };
+		},
+		gridSpacing = 10; //square element in px
 
     self.canvas = document.createElement('canvas');
     self.offCanvas = document.createElement('canvas');
-    self.cWidth = 320;
-    self.cHeight = 320;
+    self.cWidth = width ? width - (width % gridSpacing) : 320;
+    self.cHeight = height ? height - (height % gridSpacing) : 320;
+	self.gridSpacing = gridSpacing;
     self.canvas.width = self.offCanvas.width = self.cWidth;
     self.canvas.height = self.offCanvas.height = self.cHeight;
     self.context = self.canvas.getContext('2d');
@@ -37,8 +39,8 @@ SnakeGame.prototype = {
             Snake = function (length) {
                 var i;
                 this.segment = {
-                    width: 10,
-                    height: 10,
+                    width: game.gridSpacing,
+                    height: game.gridSpacing,
                     img: null
                 };
                 this.skinColor = 'green';
@@ -46,9 +48,10 @@ SnakeGame.prototype = {
                 this.speed = 1;
                 this.dirX = 1;
                 this.dirY = 0;
-                this.lng = length;
+                this.initialLng = length;
                 this.body = [];
-                for (i = 0; i < this.lng; i++) {
+
+				for (i = 0; i < this.initialLng; i++) {
                     this.body.push([i, 0]);
                 }
 
@@ -211,10 +214,12 @@ SnakeGame.prototype = {
 		this.snake.draw(this.context);
 	},
     drawFood: function (ctx) {
-        var i, foodType;
+        var i, foodType,
+			w, h;
+		w = h = this.gridSpacing;
         for (i = 0; i < this.food.positions.length; i++) {
             foodType = this.food.positions[i][2];
-            ctx.drawImage(this.food[foodType], this.food.positions[i][0] * 10, this.food.positions[i][1] * 10, 10, 10);
+            ctx.drawImage(this.food[foodType], this.food.positions[i][0] * w, this.food.positions[i][1] * h, w, h);
         }
     },
 	update: function () {
@@ -228,8 +233,9 @@ SnakeGame.prototype = {
 	foodPlacer: function (foodType) {
 		var type = foodType && foodType instanceof String ? foodType : '',
 			self = this,
-			rndPos = function () {
-				return Math.floor(Math.random() * 32);
+			rndPos = function (axis) {
+				var gridSize = (axis == 'x' ? self.cWidth : self.cHeight) / self.gridSpacing;
+				return Math.floor(Math.random() * gridSize);
 			},
 			isPlaceBusy = function (x, y) {
 				var newPos = new RegExp('\\[' + [x,y]);
@@ -237,11 +243,11 @@ SnakeGame.prototype = {
 			},
 			genFood = function (str) {
 				var tries = 0,
-					rndX = rndPos(),
-					rndY = rndPos();
+					rndX = rndPos('x'),
+					rndY = rndPos('y');
 				while (isPlaceBusy(rndX, rndY) && tries < 3) {
-					rndX = rndPos();
-					rndY = rndPos();
+					rndX = rndPos('x');
+					rndY = rndPos('y');
 					tries++;
 				}
 				if (tries < 3) {
@@ -259,7 +265,9 @@ SnakeGame.prototype = {
             headX = body[body.length - 1][0],
             headY = body[body.length - 1][1],
             isBodyIntersection = JSON.stringify(body.slice(0, -1)).indexOf(JSON.stringify([headX, headY])) !== -1,
-            isOutBoundary = headX < 0 || headX >= 32 || headY < 0 || headY >= 32;
+            isOutBoundary =
+				headX < 0 || headX >= this.cWidth / this.gridSpacing ||
+				headY < 0 || headY >= this.cHeight / this.gridSpacing;
         if (isBodyIntersection || isOutBoundary) {
             this.gameOver = true;
             console.log('game over');
