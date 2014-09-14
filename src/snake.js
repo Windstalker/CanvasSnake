@@ -1,6 +1,12 @@
 var SnakeGame = (function () {
-	var Snake = function (sw, sh, length, gender) {
-		var i;
+	var Snake = function (options) {
+		var sw = options.segmentWidth,
+			sh = options.segmentHeight,
+			l = options.length || 3,
+			gender = options.gender || 'male',
+			dirX = options.dirX || 1,
+			dirY = options.dirY || 0;
+
 		this.gender = gender;
 		this.colorMap = {
 			male: ['green', 'cyan'],
@@ -19,20 +25,32 @@ var SnakeGame = (function () {
 		};
 		this.skinColor = this.colorMap[gender][0];
 		this.skinColor2 = this.colorMap[gender][1];
-		this.speed = 1;
-		this.dirX = 1;
-		this.dirY = 0;
-		this.initialLng = length || 3;
+		this.speed = options.speed || 1;
+		this.lives = options.lives || 3;
+		this.dirX = +(dirY === 0) * dirX;
+		this.dirY = +(dirX === 0) * dirY;
+		this.initDirX = +(dirY === 0) * dirX;
+		this.initDirY = +(dirX === 0) * dirY;
+		this.startX = options.startX || 0;
+		this.startY = options.startY || 0;
+		this.initialLng = l;
 		this.body = [];
 
-		for (i = 0; i < this.initialLng; i++) {
-			this.body.push([i, 0]);
-		}
+		this.init();
 
 		return this;
 	};
 
 	Snake.prototype = {
+		init: function () {
+			var i = 0;
+			for (i; i < this.initialLng; i++) {
+				this.body.push([(i * this.initDirX) + this.startX, (i * this.initDirY) + this.startY]);
+			}
+			this.dirX = this.initDirX;
+			this.dirY = this.initDirY;
+			return this;
+		},
 		draw: function (ctx) {
 			var self = this,
 				i = 0;
@@ -53,8 +71,8 @@ var SnakeGame = (function () {
 				ctx.fillStyle = this.skinColor;
 				ctx.beginPath();
 				ctx.moveTo(this.segment.width/2, 0);
-				ctx.lineTo(this.segment.width - 0, this.segment.height/2);
-				ctx.lineTo(this.segment.width/2, this.segment.height - 0);
+				ctx.lineTo(this.segment.width, this.segment.height/2);
+				ctx.lineTo(this.segment.width/2, this.segment.height);
 				ctx.lineTo(0, this.segment.height/2);
 				ctx.closePath();
 				ctx.fill();
@@ -111,6 +129,16 @@ var SnakeGame = (function () {
 			var x = this.body[this.body.length - 1][0] + this.dirX,
 				y = this.body[this.body.length - 1][1] + this.dirY;
 			this.body.push([x, y]);
+		},
+		loseLife: function () {
+			if (this.lives > 0) {
+				this.lives -= 1;
+			}
+			return this.lives;
+		},
+		revive: function () {
+			this.body = [];
+			return this.init().loseLife();
 		}
 	};
 
@@ -141,7 +169,7 @@ var SnakeGame = (function () {
 			life: null,
 			positions: []
 		};
-
+		self.hiScore = 0;
 		self.gameOver = false;
 		self.loader = imgLoader;
 
@@ -156,7 +184,10 @@ var SnakeGame = (function () {
 		init: function () {
 			var game = this;
 
-			this.snake = new Snake(game.gridSpacing, game.gridSpacing, 3, 'female');
+			this.snake = new Snake({
+				segmentWidth: game.gridSpacing,
+				segmentHeight: game.gridSpacing
+			});
 
 			this.getImagesFromCache();
 
@@ -269,9 +300,8 @@ var SnakeGame = (function () {
 					if (tries < 3) {
 						self.food.positions.push(food);
 						return food;
-					} else {
-						return null;
 					}
+					return null;
 				};
 			if (type.length == 0 && this.food.positions.length < 1) {
 				generated = genFood('star');
@@ -289,8 +319,11 @@ var SnakeGame = (function () {
 					headX < 0 || headX >= this.cWidth / this.gridSpacing ||
 						headY < 0 || headY >= this.cHeight / this.gridSpacing;
 			if (isBodyIntersection || isOutBoundary) {
-				this.gameOver = true;
-				console.log('game over');
+				var livesLeft = this.snake.revive();
+				if (!livesLeft) {
+					console.log('game over');
+					this.gameOver = true;
+				}
 			}
 			return this.gameOver;
 		}
