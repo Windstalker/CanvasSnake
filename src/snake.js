@@ -63,11 +63,13 @@ var SnakeGame = (function () {
 			this.segment.img = ctx.getImageData(0,0,this.segment.width,this.segment.height);
 		},
 		control: function (key) {
-			var dirX = this.keyMap[key][0],
-				dirY = this.keyMap[key][1],
-				self = this;
-			if ((self.dirX + dirX) && (self.dirY + dirY)) {
-				self.dirY = dirY; self.dirX = dirX;
+			if (this.keyMap.hasOwnProperty(key)) {
+				var dirX = this.keyMap[key][0],
+					dirY = this.keyMap[key][1],
+					self = this;
+				if ((self.dirX + dirX) && (self.dirY + dirY)) {
+					self.dirY = dirY; self.dirX = dirX;
+				}
 			}
 		},
 		scan: function (foodPos) {
