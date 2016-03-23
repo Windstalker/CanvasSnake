@@ -18,13 +18,16 @@ var SnakeGame = (function () {
 			img: null
 		};
 		this.keyMap = {
-			87: [0,-1], //up
-			83: [0,1], //down
-			65: [-1,0], //left
-			68: [1,0] //right
+			//added movement with the arrows 
+			87: [0,-1], //up (with w)
+			38: [0,-1], //up (with arrow up)
+			83: [0,1], //down (with s)
+			40: [0,1], //down (with arrow down)
+			65: [-1,0], //left (with a)
+			37: [-1,0], //left (with arrow left)
+			68: [1,0], //right (with d)
+			39: [1,0] //right (with arrow right)
 		};
-		this.skinColor = this.colorMap[gender][0];
-		this.skinColor2 = this.colorMap[gender][1];
 		this.speed = options.speed || 1;
 		this.lives = options.lives || 3;
 		this.dirX = +(dirY === 0) * dirX;
@@ -59,13 +62,19 @@ var SnakeGame = (function () {
 			}
 		},
 		prepareSegment: function (ctx) {
-			if (this.gender === 'male') {
+			//if the radio button "male" is checked
+			if (document.getElementById("male_gender").checked) {
+				this.skinColor = this.colorMap["male"][0];
+				this.skinColor2 = this.colorMap["male"][1];
 				ctx.fillStyle = this.skinColor2;
 				ctx.fillRect(0, 0, this.segment.width, this.segment.height);
 				ctx.fillStyle = this.skinColor;
 				ctx.fillRect(1, 1, this.segment.width - 2, this.segment.height - 2);
 			}
-			if (this.gender === 'female') {
+			//if the radio button "female" is checked
+			if (document.getElementById("female_gender").checked) {
+				this.skinColor = this.colorMap["female"][0];
+				this.skinColor2 = this.colorMap["female"][1];
 				ctx.strokeStyle = this.skinColor2;
 				ctx.lineWidth = 1;
 				ctx.fillStyle = this.skinColor;
@@ -240,9 +249,17 @@ var SnakeGame = (function () {
 			this.raf = window.requestAnimationFrame(callback);
 		},
 		stop: function () {
+			var ctx = this.context;
 			console.log('stopped');
 			window.cancelAnimationFrame(this.raf);
 			window.removeEventListener('keydown', this.controller, false);
+			//to display the "game over" title you see when you lose the game
+			if(this.gameOver){
+				ctx.font = "30px Helvetica";
+				ctx.fillText("GameOver", 170,150);
+				ctx.font = "20px Helvetica"
+				ctx.fillText("To restart press r", 170,180);
+			}
 		},
 		gameLoop: function () {
 			this.draw();

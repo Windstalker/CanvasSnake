@@ -15,8 +15,30 @@
 </head>
 <body>
 	<div id="game"></div>
-	<script>
+    <!-- this div is the homepage of the game, where instructions are displayed and where you can start to play the game -->
+    <div id="game_ui">
+        <h1 id="title">CanvasSnake</h1>
+        <div id="controls">
+            <div class="control"><h3>move up:</h3><span>w / arrow up</span></div>
+            <div class="control"><h3>move down:</h3><span>s / arrow down</span></div>
+            <div class="control"><h3>move left:</h3><span>a / arrow left</span></div>
+            <div class="control"><h3>move right:</h3><span>d / arrow right</span></div>
+            <div class="control"><h3>pause:</h3><span>p</span></div>
+            <div class="control"><h3>restart:</h3><span>r</span></div>
+        </div>
+        <form id="gender">
+            <span>Male</span><input name="gender" type="radio" checked="true" id="male_gender"><br>
+            <span>Female</span><input name="gender" type="radio" id="female_gender">
+        </form>
+        <div class="button" id="play" onclick="ui_playGame()">Play</div>
+    </div>
+	<!--
+    this happens now in ui.js
+    <script>
 		var snakeGame = new SnakeGame('#game', 501, 305);
 	</script>
+    -->
+    <script src="src/ui.js"></script>
 </body>
 </html>
+    

@@ -1,4 +1,89 @@
 @charset 'UTF-8';
+
+body{
+	/*setting default font to helvetica*/
+	font-family: Helvetica;
+}
+
 #game > canvas {
     border: 1px solid black;
+    /*to put canvas in center of the page*/
+    margin-left: calc(50% - 250px);
+}
+/*so that the game ui has the same position, height and width as the canvas*/
+#game_ui{
+	border: 1px solid black;
+	margin-left: calc(50% - 250px);
+	width: 501px;
+	height: 305px;
+	position: relative;
+
+	/*so that the user cannot select things in the canvas*/
+	-webkit-touch-callout: none; /* iOS Safari */
+	-webkit-user-select: none;   /* Chrome/Safari/Opera */
+	-khtml-user-select: none;    /* Konqueror */
+	-moz-user-select: none;      /* Firefox */
+	-ms-user-select: none;       /* IE/Edge */
+	user-select: none;    
+}
+/*the style of the play button you see on the homescreen and actually vor every button you wan't to show*/
+.button{
+	width: 100px;
+	padding: 10px;
+	border: solid 1px black;
+	text-align: center;
+	cursor: pointer;
+
+	-webkit-transition: 0.3s;
+	-moz-transition: 0.3s;
+	transition: 0.3s;
+
+	-webkit-touch-callout: none; /* iOS Safari */
+	-webkit-user-select: none;   /* Chrome/Safari/Opera */
+	-khtml-user-select: none;    /* Konqueror */
+	-moz-user-select: none;      /* Firefox */
+	-ms-user-select: none;       /* IE/Edge */
+	user-select: none;    
+}
+
+.button:hover{
+	color: #666;
+	border: 1px solid #666;
+}
+
+/*the position of the play button*/
+#play{
+	position: absolute;
+	bottom: 30px;
+	right: 50px;
+}
+
+/*the position of the "CanvasSnake" title*/
+#title{
+	text-align: center;
+	margin-bottom: 3vh;
+}
+
+/*the position of the whole div of controls*/
+#controls{
+	height: 200px;
+	width: 375px;
+	margin-left: 20px;
+}
+
+/*to delete that ugly margin that come as default on every h tag*/
+#controls h3{margin: 0;}
+
+/*to align every control div*/
+.control{
+	margin: 10px;
+	display: inline-block;
+	width: 120px;
+}
+
+/*the position of the radio buttons*/
+#gender{
+	position: absolute;
+	bottom: 100px;
+	right: 98px;
 }
